@@ -10,12 +10,12 @@
 
 std::vector<std::string> *mesh_filepaths;
 std::string output_dir;
+int width;
+int height;
 
 void captureImages(igl::viewer::Viewer& viewer) {
 
   // Initialize png buffers
-  int width = 1280;
-  int height = 800;
   Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> R(width, height);
   Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> G(width, height);
   Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> B(width, height);
@@ -30,9 +30,12 @@ void captureImages(igl::viewer::Viewer& viewer) {
   int y_jumps = 15;
   Eigen::Matrix3f xRotate;
   Eigen::Matrix3f yRotate;
-
+  std::cout << "Rendering images for " << mesh_filepaths->size() 
+    << " models" << std::endl;
+  
   for (int i = 0; i < mesh_filepaths->size(); i++) {
 
+    std::cout << i+1 << std::endl;
     // Load mesh
     std::string mesh_fp = mesh_filepaths->at(i);
     Eigen::MatrixXd V;
@@ -41,7 +44,10 @@ void captureImages(igl::viewer::Viewer& viewer) {
 
     // Create output directory
     std::stringstream new_dir;
-    new_dir << output_dir << "/" << mesh_fp.substr(0, mesh_fp.size()-4);
+    std::string filename = mesh_fp.substr(0, mesh_fp.size()-4);
+    int begin = filename.rfind('/');
+    filename = filename.substr(begin + 1);
+    new_dir << output_dir << "/" << filename;
     std::stringstream new_dir_cmd;
     new_dir_cmd << "mkdir " << new_dir.str();
     const char* cmd = (new_dir_cmd.str()).c_str();
@@ -65,12 +71,12 @@ void captureImages(igl::viewer::Viewer& viewer) {
     V = V * rotation_y;
 
     // Draw mesh to viewer
+    viewer.data.clear();
     viewer.data.set_mesh(V,F);
-    viewer.data.set_face_based(false);
-    viewer.data.set_normals(viewer.data.V_normals);
-    viewer.core.align_camera_center(V,F);
+    viewer.core.align_camera_center(viewer.data.V,viewer.data.F);
     viewer.draw();
-
+    //viewer.data.set_face_based(false);
+    //viewer.data.set_normals(viewer.data.V_normals);
 
     for (int j = 0; j < x_jumps; j++) {
       xRotate << 
@@ -92,17 +98,20 @@ void captureImages(igl::viewer::Viewer& viewer) {
 
         viewer.core.draw_buffer(viewer.data, viewer.opengl, false, R,G,B,A);
         std::stringstream out_name;
-        out_name << output_dir << "/" << j << "_" << k << ".png";
+        out_name << new_dir.str() << "/" << j << "_" << k << ".png";
         igl::png::writePNG(R,G,B,A,out_name.str());
       }
     }
+    viewer.data.V = Eigen::MatrixXd();
+    viewer.data.F = Eigen::MatrixXi();
   }
+  std::cout << "--RENDERING FINISHED--" << std::endl;
 }
 
 bool key_down(igl::viewer::Viewer& viewer, unsigned char key, int modifier) {
   if (key == ' ') {
     captureImages(viewer);
-  }
+  }   
   return false;
 }
     
@@ -197,16 +206,18 @@ int main(int argc, char *argv[])
 {
 
   // Get command line args
-  if (argc < 3) {
+  if (argc < 5) {
     std::cout << "~~ERROR~~" << std::endl;
     std::cout << 
-      "Usage: ./bin FILEPATH_OF_LIST_OF_FILES.txt OUTPUT_DIRECTORY" 
+      "Usage: ./bin FILEPATH_OF_LIST_OF_FILES.txt OUTPUT_DIRECTORY WIDTH HEIGHT" 
       << std::endl;
     return -1;
   }
   std::string mesh_listing_file = argv[1];
   output_dir = argv[2];
   mesh_filepaths = readLines(mesh_listing_file);
+  width = std::atoi(argv[3]);
+  height = std::atoi(argv[4]);
 
   // Bring up viewer and prep for capture
   Eigen::MatrixXd V;
