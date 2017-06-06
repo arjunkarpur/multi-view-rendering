@@ -22,12 +22,16 @@ void captureImages(igl::viewer::Viewer& viewer) {
   Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> A(width, height);
 
   // Initialize vars needed for camera rotations
-  int x_jumps = 3;
+  int x_jumps = 7;
   float x_angles[x_jumps];
-  x_angles[0] = PI/6;
-  x_angles[1] = 0;
-  x_angles[2] = -PI/6;
-  int y_jumps = 15;
+  x_angles[0] = PI/2;
+  x_angles[1] = PI/3;
+  x_angles[2] = PI/6;
+  x_angles[3] = 0;
+  x_angles[4] = -PI/6;
+  x_angles[5] = -PI/3;
+  x_angles[6] = -PI/2;
+  int y_jumps = 30;
   Eigen::Matrix3f xRotate;
   Eigen::Matrix3f yRotate;
   std::cout << "Rendering images for " << mesh_filepaths->size() 
@@ -76,6 +80,7 @@ void captureImages(igl::viewer::Viewer& viewer) {
     viewer.core.align_camera_center(viewer.data.V,viewer.data.F);
     viewer.draw();
 
+    int im_ctr = 0;
     for (int j = 0; j < x_jumps; j++) {
       xRotate << 
         1, 0, 0,
@@ -96,8 +101,10 @@ void captureImages(igl::viewer::Viewer& viewer) {
 
         viewer.core.draw_buffer(viewer.data, viewer.opengl, false, R,G,B,A);
         std::stringstream out_name;
-        out_name << new_dir.str() << "/" << j << "_" << k << ".png";
+        //out_name << new_dir.str() << "/" << j << "_" << k << ".png";
+        out_name << new_dir.str() << "/" << im_ctr << ".png";
         igl::png::writePNG(R,G,B,A,out_name.str());
+        im_ctr++;
       }
     }
     viewer.data.V = Eigen::MatrixXd();
