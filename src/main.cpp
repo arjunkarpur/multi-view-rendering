@@ -22,6 +22,7 @@ void captureImages(igl::viewer::Viewer& viewer) {
   Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> A(width, height);
 
   // Initialize vars needed for camera rotations
+  bool background = true;
   int x_jumps = 7;
   float x_angles[x_jumps];
   x_angles[0] = PI/2;
@@ -80,6 +81,7 @@ void captureImages(igl::viewer::Viewer& viewer) {
     viewer.core.align_camera_center(viewer.data.V,viewer.data.F);
     viewer.draw();
 
+    // Render in multiple views
     int im_ctr = 0;
     for (int j = 0; j < x_jumps; j++) {
       xRotate << 
@@ -88,20 +90,31 @@ void captureImages(igl::viewer::Viewer& viewer) {
         0, 0-std::sin(x_angles[j]), std::cos(x_angles[j]);
 
       for (int k = 0; k < y_jumps; k++) {
-
         float y_angle = ((2*PI)/float(y_jumps))*float(k);
         yRotate <<
           std::cos(y_angle), 0, -std::sin(y_angle),
           0, 1, 0,
           std::sin(y_angle), 0, std::cos(y_angle);
 
+        // Rotate mesh and render
         Eigen::Quaternionf rot(xRotate*yRotate);
         viewer.core.trackball_angle = rot;
         viewer.draw();
 
+        // Draw view to RGBA buffers
         viewer.core.draw_buffer(viewer.data, viewer.opengl, false, R,G,B,A);
+
+        // If desired, include background in screenshot
+        if (background) {
+          for (int y = 0; y < A.rows(); y++) {
+            for (int z = 0; z < A.cols(); z++) {
+              A(y,z) = char(255);
+            }
+          }
+        }
+
+        // Take PNG screenshot and save to file
         std::stringstream out_name;
-        //out_name << new_dir.str() << "/" << j << "_" << k << ".png";
         out_name << new_dir.str() << "/" << im_ctr << ".png";
         igl::png::writePNG(R,G,B,A,out_name.str());
         im_ctr++;
